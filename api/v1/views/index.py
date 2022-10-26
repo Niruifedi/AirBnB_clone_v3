@@ -22,16 +22,15 @@ def status_code():
     return jsonify({"status": "OK"})
 
 
-@app_views.route('/stats/', methods=['GET'], strict_slashes=False)
+@app_views.route('/stats/')
 def retrieve_obj():
     """
     retrieves number of object by type
     """
-    classes = [Amenity, City, Place, Review, State, User]
-    names = ["amenities", "cities", "places", "reviews", "states", "users"]
+    classes = {"amenities": Amenity, "cities": City, "places": Place,
+           "reviews": Review, "states": State, "users": User}
 
     num_obj = {}
-    for i in range(len(classes)):
-        num_obj[names[i]] = storage.count(classes[i])
-
-    return jsonify(num_obj)
+    for key, val in classes.items():
+        num_obj[key] = storage.count(val)
+    return num_obj
