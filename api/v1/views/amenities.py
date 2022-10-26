@@ -1,94 +1,61 @@
 #!/usr/bin/python3
-""" objects that handles all default RestFul API actions for Amenities"""
-from models.amenity import Amenity
-from models import storage
-from api.v1.views import app_views
-from flask import abort, jsonify, make_response, request
-from flasgger.utils import swag_from
+"""
+A new view for Amenity objects that handles all default RESTFul API actions
+"""
+from flask import abort
+from flask import jsonify
+from flask import request
+
+from . import Amenity
+from . import storage
+from . import app_views
+
+# f are class properties to validate the request payload
+f = ("name",)
 
 
-@app_views.route('/amenities', methods=['GET'], strict_slashes=False)
-@swag_from('documentation/amenity/all_amenities.yml')
-def get_amenities():
+@app_views.route("/amenities", methods=["GET", "POST"], strict_slashes=False)
+def all_amenities():
     """
-    Retrieves a list of all amenities
+    Creates a new Amenity obj
+    Retrieves the list of all City objects of a Amenity
     """
-    all_amenities = storage.all(Amenity).values()
-    list_amenities = []
-    for amenity in all_amenities:
-        list_amenities.append(amenity.to_dict())
-    return jsonify(list_amenities)
-
-
-@app_views.route('/amenities/<amenity_id>/', methods=['GET'],
-                 strict_slashes=False)
-@swag_from('documentation/amenity/get_amenity.yml', methods=['GET'])
-def get_amenity(amenity_id):
-    """ Retrieves an amenity """
-    amenity = storage.get(Amenity, amenity_id)
-    if not amenity:
-        abort(404)
-
-    return jsonify(amenity.to_dict())
-
-
-@app_views.route('/amenities/<amenity_id>', methods=['DELETE'],
-                 strict_slashes=False)
-@swag_from('documentation/amenity/delete_amenity.yml', methods=['DELETE'])
-def delete_amenity(amenity_id):
-    """
-    Deletes an amenity  Object
-    """
-
-    amenity = storage.get(Amenity, amenity_id)
-
-    if not amenity:
-        abort(404)
-
-    storage.delete(amenity)
-    storage.save()
-
-    return make_response(jsonify({}), 200)
-
-
-@app_views.route('/amenities', methods=['POST'], strict_slashes=False)
-@swag_from('documentation/amenity/post_amenity.yml', methods=['POST'])
-def post_amenity():
-    """
-    Creates an amenity
-    """
-    if not request.get_json():
+    if request.method == "GET":
+        return jsonify([a.to_dict() for a in storage.all(Amenity).values()])
+    else:
+        body = request.get_json(silent=True)
+        if request.is_json and body is not None:
+            pay = {k: str(v) for k, v in body.items() if k in f}
+            if not pay.get("name", None):
+                abort(400, description="Missing name")
+            new_amenity = Amenity(**pay)
+            storage.new(new_amenity), storage.save()
+            return jsonify(new_amenity.to_dict()), 201
         abort(400, description="Not a JSON")
 
-    if 'name' not in request.get_json():
-        abort(400, description="Missing name")
 
-    data = request.get_json()
-    instance = Amenity(**data)
-    instance.save()
-    return make_response(jsonify(instance.to_dict()), 201)
-
-
-@app_views.route('/amenities/<amenity_id>', methods=['PUT'],
-                 strict_slashes=False)
-@swag_from('documentation/amenity/put_amenity.yml', methods=['PUT'])
-def put_amenity(amenity_id):
+@app_views.route("/amenities/<amenity_id>",
+                 methods=["GET", "PUT", "DELETE"], strict_slashes=False)
+def one_amenity(amenity_id):
     """
-    Updates an amenity
+    Deletes an existing Amenity object
+    Retrieves an existing Amenity object
+    Updates an existing Amenity object
+    Args:
+        amenity_id: primary key of an existing Amenity object
     """
-    if not request.get_json():
+    amen = storage.get(Amenity, str(amenity_id))
+    if not amen:
+        abort(404, description="Not found")
+    if request.method == "GET":
+        return jsonify(amen.to_dict())
+    elif request.method == "DELETE":
+        storage.delete(amen), storage.save()
+        return jsonify({})
+    else:
+        body = request.get_json(silent=True)
+        if request.is_json and body is not None:
+            [setattr(amen, k, str(v)) for k, v in body.items() if k in f]
+            amen.save()
+            return jsonify(amen.to_dict()), 200
         abort(400, description="Not a JSON")
-
-    ignore = ['id', 'created_at', 'updated_at']
-
-    amenity = storage.get(Amenity, amenity_id)
-
-    if not amenity:
-        abort(404)
-
-    data = request.get_json()
-    for key, value in data.items():
-        if key not in ignore:
-            setattr(amenity, key, value)
-    storage.save()
-    return make_response(jsonify(amenity.to_dict()), 200)
