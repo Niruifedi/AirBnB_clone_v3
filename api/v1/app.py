@@ -2,7 +2,7 @@
 """
 Script uses blueprint object for routing the application
 """
-from flask import Flask, jsonify
+from flask import Flask, jsonify, make_response
 from models import storage
 from api.v1.views import app_views
 from os import environ
@@ -24,7 +24,7 @@ def not_found(e):
     """
     404 error handler
     """
-    return jsonify({"error": 'Not found'})
+    return make_response(jsonify({"error": 'Not found'}), 404)
 
 
 if __name__ == '__main__':
