@@ -1,36 +1,30 @@
 #!/usr/bin/python3
-"""
-Script defines url route for the blueprint object
-"""
-
-from models.amenity import Amenity
-from models.city import City
-from models.place import Place
-from models.review import Review
-from models.state import State
-from models.user import User
-from models import storage
+"""index"""
 from api.v1.views import app_views
 from flask import jsonify
+from models import storage
+from models.user import User
+from models.place import Place
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.review import Review
+
+classes = {"users": "User", "places": "Place", "states": "State",
+           "cities": "City", "amenities": "Amenity",
+           "reviews": "Review"}
 
 
-@app_views.route('/status', methods=['GET'], strict_slashes=False)
-def status_code():
-    """
-    the url path /status returns a status code 'OK' in json format
-    """
-    return jsonify({"status": "OK"})
+@app_views.route('/status', methods=['GET'])
+def status():
+    ''' routes to status page '''
+    return jsonify({'status': 'OK'})
 
 
-@app_views.route('/stats/')
-def retrieve_obj():
-    """
-    retrieves number of object by type
-    """
-    classes = {"amenities": Amenity, "cities": City, "places": Place,
-           "reviews": Review, "states": State, "users": User}
-
-    num_obj = {}
-    for key, val in classes.items():
-        num_obj[key] = storage.count(val)
-    return num_obj
+@app_views.route('/stats', methods=['GET'])
+def count():
+    '''retrieves the number of each objects by type'''
+    count_dict = {}
+    for cls in classes:
+        count_dict[cls] = storage.count(classes[cls])
+    return jsonify(count_dict)
